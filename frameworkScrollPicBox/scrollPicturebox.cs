@@ -175,6 +175,7 @@ namespace SunUi
             {
                 // 调整 panel1 的大小
                 panel1.Size = new Size(this.Size.Width -100, this.Size.Height - 100);
+                //
             }
         }
 
