@@ -87,52 +87,53 @@ namespace SunUi
             pictureBox1.Click += pictureBox1_Click;
             pictureBox1.Paint += pictureBox1_Paint;
             // 
-            // label4
+            // label1
             // 
-            label4.AutoSize = true;
-            label4.BackColor = Color.FromArgb(50, 255, 255, 255);
-            label4.Font = new Font("Webdings", 9F, FontStyle.Regular, GraphicsUnit.Point, 2);
-            label4.Location = new Point(100, 50);
-            label4.Name = "label4";
-            label4.Size = new Size(21, 19);
-            label4.TabIndex = 7;
-            label4.Text = "6";
-            label4.Click += label4_Click;
+            label1.AutoSize = true;
+            label1.BackColor = Color.FromArgb(50, 255, 255, 255);
+            label1.Font = new Font("Webdings", 9F, FontStyle.Regular, GraphicsUnit.Point, 2);
+            label1.Location = new Point(panel1.Size.Width / 2 - panel1.Size.Width / 3, panel1.Size.Height / 2 - label1.Height / 2);
+            label1.Name = "label1";
+            label1.Size = new Size(24, 20);
+            label1.TabIndex = 4;
+            label1.Text = "3";
+            label1.Click += Label_Click;
             // 
             // label2
             // 
             label2.AutoSize = true;
             label2.BackColor = Color.FromArgb(50, 255, 255, 255);
             label2.Font = new Font("Webdings", 9F, FontStyle.Regular, GraphicsUnit.Point, 2);
-            label2.Location = new Point(100, 23);
+            label2.Location = new Point(panel1.Size.Width / 2 - label2.Width, label2.Height);
             label2.Name = "label2";
-            label2.Size = new Size(21, 19);
+            label2.Size = new Size(24, 20);
             label2.TabIndex = 5;
             label2.Text = "5";
             label2.Click += label2_Click;
-            // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.BackColor = Color.FromArgb(50, 255, 255, 255);
-            label1.Font = new Font("Webdings", 9F, FontStyle.Regular, GraphicsUnit.Point, 2);
-            label1.Location = new Point(100, 50);
-            label1.Name = "label1";
-            label1.Size = new Size(21, 19);
-            label1.TabIndex = 4;
-            label1.Text = "3";
-            label1.Click += Label_Click;
             // 
             // label3
             // 
             label3.AutoSize = true;
             label3.BackColor = Color.FromArgb(50, 255, 255, 255);
             label3.Font = new Font("Webdings", 9F, FontStyle.Regular, GraphicsUnit.Point, 2);
-            label3.Location = new Point(100, 50);
+            label3.Location = new Point(panel1.Size.Width - 100, panel1.Size.Height / 2 - label3.Height / 2);
             label3.Name = "label3";
-            label3.Size = new Size(21, 19);
+            label3.Size = new Size(24, 20);
             label3.TabIndex = 6;
             label3.Text = "4";
+            // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.BackColor = Color.FromArgb(50, 255, 255, 255);
+            label4.Font = new Font("Webdings", 9F, FontStyle.Regular, GraphicsUnit.Point, 2);
+            label4.Location = new Point(panel1.Size.Width / 2 - label2.Width / 2, panel1.Size.Height - label4.Height);
+            label4.Name = "label4";
+            label4.Size = new Size(24, 20);
+            label4.TabIndex = 7;
+            label4.Text = "6";
+            label4.Click += label4_Click;
+            // 
             // 
             // scrollPicturebox
             // 
@@ -141,7 +142,7 @@ namespace SunUi
             Margin = new Padding(4, 1, 4, 1);
             Name = "scrollPicturebox";
             Size = new Size(467, 261);
-            Load += scrollPicturebox_Load;
+            //Load += scrollPicturebox_Load;
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();

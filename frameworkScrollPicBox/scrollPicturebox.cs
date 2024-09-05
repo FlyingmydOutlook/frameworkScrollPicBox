@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Input;
+using static System.Net.Mime.MediaTypeNames;
 
 
 namespace SunUi
@@ -24,6 +25,11 @@ namespace SunUi
         
         private System.Windows.Forms.Timer scrollTimer;
         private System.Windows.Forms.Timer clickTimer;
+
+        private Color crosshairColor = Color.FromArgb(50, 255, 0, 0);
+        private float crosshairLineWidth = 3;
+
+        private Point mouseDownLocation;
 
         private bool isScrolling = false;
         private Size sizebeforeLoadImg;
@@ -69,7 +75,7 @@ namespace SunUi
 
         public delegate void LabelLongPressEventHandler(object sender, EventArgs e);
 
-
+        int scrollSpeed =2;
 
         private LabelLongPressEventHandler longPressHandler;
 
@@ -82,17 +88,28 @@ namespace SunUi
 
         int useMouseHover = 0;
 
+        //初始化图片加载计时器
+        private System.Windows.Forms.Timer refreshTimer;
+
+        //图片加载池
+        private List<Bitmap> images = new List<Bitmap>();
+
+        private int imageIndex = 0;
+
         public scrollPicturebox()
         {
 
             this.AutoScaleMode = AutoScaleMode.Dpi;
             InitializeComponent();
             InitializeCustomComponents();
+            InitRefrashTimer();
+
+            this.panel1.Resize+=panel1_Resize;
             /*pictureBox1 = new PictureBox();
             panel1 = new Panel();
             Point pointOfscrollPicbox = new Point();
             pointOfscrollPicbox = (Point)this.Size;*/
-            
+
             //this.Load += scrollPicturebox_Load;
             this.Resize += ScrollPicturebox_Resize;
             //this.ParentChanged += scrollPicturebox_ParentChanged;
@@ -112,6 +129,9 @@ namespace SunUi
 
             //this.panel1.MouseHover += new System.EventHandler(this.panel1_MouseHover);
             //this.MouseHover += new System.Windows.Forms.MouseEventHandler(this.ScrollPicturebox_MouseHover);
+
+            
+            
 
             //初始化resetEventArgs
             //resetEventArgs = new MouseEventArgs(MouseButtons.None, 0, 0, 0, 0);
@@ -153,7 +173,7 @@ namespace SunUi
             p2 = Point.Empty;
 
             //初始化myImage
-            myImage = new Bitmap(sizebeforeLoadImg.Width, sizebeforeLoadImg.Height);
+            myImage = new Bitmap(panel1.Size.Width, sizebeforeLoadImg.Height);
             g = Graphics.FromImage(myImage);
             g.Clear(Color.White);
 
@@ -167,6 +187,51 @@ namespace SunUi
             scrollYfirst = panel1.VerticalScroll.Value;
 
             panel1.MouseWheel += new System.Windows.Forms.MouseEventHandler(Panel1_MouseWheel);
+
+            
+
+        }
+
+        /*private void scrollPicturebox_Load(object sender,EventArgs e)
+        {
+            if (pictureBox1 != null)
+            {
+                pictureBox1.Size = new Size(panel1.Size.Width - 10, panel1.Size.Height);
+            }
+        }*/
+
+        private void panel1_Resize(object sender,EventArgs eventArgs)
+        {
+            if (pictureBox1  != null)
+            {
+                pictureBox1.Size = new Size(panel1.Size.Width - 5, panel1.Size.Height - 5);
+            }
+            // 调整Label的位置，使其相对于PictureBox的位置保持不变
+            UpdateLabelPosition(label1, panel1.Size.Width / 2 - panel1.Size.Width / 3, scrollX, panel1.Size.Height / 2 - label1.Height / 2, scrollY);
+            UpdateLabelPosition(label2, panel1.Size.Width / 2 - label1.Width / 2, scrollX, label2.Height, scrollY);
+            UpdateLabelPosition(label3, panel1.Size.Width - 100, scrollX, panel1.Size.Height / 2 - label3.Height / 2, scrollY);
+            UpdateLabelPosition(label4, panel1.Size.Width / 2 - label2.Width / 2, scrollX, panel1.Size.Height - label3.Height * 2, scrollY);
+        }
+        private void InitRefrashTimer()
+        {
+            refreshTimer = new System.Windows.Forms.Timer();
+            refreshTimer.Interval = 33; 
+            refreshTimer.Tick += RefreshTimer_Tick;
+            refreshTimer.Start();
+        }
+        private void RefreshTimer_Tick(object sender, EventArgs e)
+        {
+            if (images.Count > 0)
+            {
+                // 更新图片索引
+                imageIndex = (imageIndex + 1) % images.Count;
+
+                // 设置 PictureBox 的图像
+                pictureBox1.Image = images[imageIndex];
+
+                // 触发重绘
+                pictureBox1.Invalidate();
+            }
         }
 
         private void ScrollPicturebox_Resize(object sender, EventArgs e)
@@ -174,9 +239,15 @@ namespace SunUi
             if (panel1 != null)
             {
                 // 调整 panel1 的大小
-                panel1.Size = new Size(this.Size.Width -100, this.Size.Height - 100);
+                panel1.Size = new Size(this.Size.Width -20, this.Size.Height - 20);
                 //
             }
+            if (pictureBox1 !=null)
+            {
+                pictureBox1.Size = new Size(panel1.Size.Width-5,panel1.Size.Height-5);
+            }
+
+            pictureBox1.Invalidate();
         }
 
         private void scrollPicturebox_ParentChanged(object sender, EventArgs e)
@@ -362,6 +433,22 @@ namespace SunUi
             
 
         }
+
+        public void SetscrollSpeed(int value)
+        {
+            scrollSpeed = value;
+        }
+
+        public void SetCrosshairColor(Color value)
+        {
+            crosshairColor = value;
+        }
+
+        public void SetCrosshairLineWidth(float value)
+        {
+            crosshairLineWidth = value;
+        }
+
         public  void SetLineColor(Color value)
         {
             lineColor = value;
@@ -460,6 +547,7 @@ namespace SunUi
         {
             if (e.Button == MouseButtons.Left)
             {
+                mouseDownLocation=e.Location;
                 isDrawLine=true;
                 if (isDrawLine)
                 {
@@ -469,10 +557,18 @@ namespace SunUi
                     }
                     else
                     {
-                        lines.Add(new Tuple<Point, Point>(p1, e.Location));
+
+                        /*p2 = e.Location;
+                        // 计算线段长度
+                        double length = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
+                        // 仅在长度不为0时添加线段
+                        if (length > 0)
+                        {
+                            lines.Add(new Tuple<Point, Point>(p1, p2));
+                        }
                         p1 = Point.Empty;
                         p2 = Point.Empty;
-                        pictureBox1.Invalidate(); // 触发重绘
+                        pictureBox1.Invalidate(); // 触发重绘*/
                     }
                 }
             }
@@ -518,9 +614,9 @@ namespace SunUi
                 /*textBox1.Text = pictureBox1.Size.Width.ToString();
                 textBox2.Text = panel1.Size.Width.ToString();
                 textBox3.Text = this.Size.Width.ToString();*/
-                Debug.WriteLine(pictureBox1.Size.Width.ToString());
+               /* Debug.WriteLine(pictureBox1.Size.Width.ToString());
                 Debug.WriteLine(panel1.Size.Width.ToString());
-                Debug.WriteLine(this.Size.Width.ToString());
+                Debug.WriteLine(this.Size.Width.ToString());*/
                 
 
                 
@@ -534,7 +630,11 @@ namespace SunUi
             if (isDrawLine && !p1.IsEmpty)
             {
                 p2 = e.Location;
-                lines.Add(new Tuple<Point, Point>(p1, p2));
+                // 检查鼠标按下和释放的位置是否相同
+                if (mouseDownLocation != e.Location)
+                {
+                    lines.Add(new Tuple<Point, Point>(p1, p2));
+                }
                 p1 = Point.Empty;
                 p2 = Point.Empty;
                 pictureBox1.Invalidate(); // 触发重绘
@@ -568,7 +668,7 @@ namespace SunUi
 
         private void DrawCrosshair(Graphics g, int x, int y)
         {
-            using (Pen pen = new Pen(Color.Red, 2))
+            using (Pen pen = new Pen(crosshairColor, crosshairLineWidth))
             {
                 // 绘制水平线
                 g.DrawLine(pen, x - 10, y, x + 10, y);
@@ -612,10 +712,10 @@ namespace SunUi
             scrollTimer.Start();
 
             // 调整Label的位置，使其相对于PictureBox的位置保持不变
-            UpdateLabelPosition(label1, sizebeforeLoadImg.Width / 2 - sizebeforeLoadImg.Width / 3, scrollX, sizebeforeLoadImg.Height / 2 - label1.Height / 2, scrollY);
-            UpdateLabelPosition(label2, sizebeforeLoadImg.Width / 2 - label1.Width/2, scrollX, label2.Height, scrollY);
-            UpdateLabelPosition(label3, sizebeforeLoadImg.Width - 100, scrollX, sizebeforeLoadImg.Height / 2 - label3.Height / 2, scrollY);
-            UpdateLabelPosition(label4, sizebeforeLoadImg.Width / 2 - label2.Width / 2, scrollX, sizebeforeLoadImg.Height - label3.Height * 2, scrollY);
+            UpdateLabelPosition(label1, panel1.Size.Width / 2 - panel1.Size.Width / 3, scrollX, panel1.Size.Height / 2 - label1.Height / 2, scrollY);
+            UpdateLabelPosition(label2, panel1.Size.Width / 2 - label1.Width/2, scrollX, label2.Height, scrollY);
+            UpdateLabelPosition(label3, panel1.Size.Width - 100, scrollX, panel1.Size.Height / 2 - label3.Height / 2, scrollY);
+            UpdateLabelPosition(label4, panel1.Size.Width / 2 - label2.Width / 2, scrollX, panel1.Size.Height - label3.Height * 2, scrollY);
 
 
             // 触发重绘
@@ -727,8 +827,8 @@ namespace SunUi
             }
             
             // 在 PictureBox 的中心绘制十字准心
-            int centerX = sizebeforeLoadImg.Width / 2 + scrollX;
-            int centerY = sizebeforeLoadImg.Height / 2 + scrollY;
+            int centerX = panel1.Size.Width / 2 + scrollX;
+            int centerY = panel1.Size.Height / 2 + scrollY;
 
             DrawCrosshair(e.Graphics, centerX, centerY);
 
@@ -764,26 +864,7 @@ namespace SunUi
 
         }
 
-        private void scrollPicturebox_Load(object sender, EventArgs e)
-        {
-/*
-            if (panel1 != null)
-            {
-
-                panel1.Size = new Size(this.Width - 5, this.Height - 5);
-            }
-
-            if (pictureBox1 != null)
-            {
-                pictureBox1.Size = new Size(panel1.Width - 5, this.panel1.Height - 5);
-            }
-
-            if (pictureBox1 != null)
-            {
-                pictureBox1.Size = panel1.Size;
-            }*/
-
-        }
+        
 
         /*private void scrollPicturebox_Resize(object sender, EventArgs e)
         {
@@ -807,15 +888,21 @@ namespace SunUi
         }*/
 
 
-        public void LoadImage(string path)
+        public void LoadImages(List<string> imagePaths)
         {
-            
-                backgroundImage = new Bitmap(path);
-                PBwidth = backgroundImage.Width;
-                PBheight = backgroundImage.Height;
-                pictureBox1.WaitOnLoad = false; // 确保异步加载
-                pictureBox1.LoadAsync(path); // 异步加载图片
-            
+            foreach (var path in imagePaths)
+            {
+                images.Add(new Bitmap(path));
+            }
+        }
+
+        public void LoadBackgroundImage(string path)
+        {
+            backgroundImage = new Bitmap(path);
+            PBwidth = backgroundImage.Width;
+            PBheight = backgroundImage.Height;
+            pictureBox1.WaitOnLoad = false; // 确保异步加载
+            pictureBox1.LoadAsync(path); // 异步加载图片
         }
 
         private void label3_Click(object sender, EventArgs e)
@@ -832,8 +919,11 @@ namespace SunUi
         private void AutoScrollPanel(System.Windows.Forms.MouseEventArgs e)
         {
             const int scrollMargin = 1; // 定义一个边距，当鼠标接近边缘时开始滚动
-            const int scrollAmount = 2; // 每次滚动的像素数
-
+            //const int scrollSpeed = 2; // 每次滚动的像素数
+            if (scrollSpeed ==0)
+            {
+                scrollSpeed = 2;
+            }
             // 获取当前滚动位置
             int currentScrollX = panel1.HorizontalScroll.Value;
             int currentScrollY = panel1.VerticalScroll.Value;
@@ -847,26 +937,26 @@ namespace SunUi
             // 检查鼠标是否接近左边缘
             if (actualMouseX < scrollMargin)
             {
-                panel1.HorizontalScroll.Value = Math.Max(panel1.HorizontalScroll.Value - scrollAmount, panel1.HorizontalScroll.Minimum);
+                panel1.HorizontalScroll.Value = Math.Max(panel1.HorizontalScroll.Value - scrollSpeed, panel1.HorizontalScroll.Minimum);
                 needScroll = true;
             }
             // 检查鼠标是否接近右边缘
             else if (actualMouseX > panel1.ClientSize.Width - scrollMargin)
             {
-                panel1.HorizontalScroll.Value = Math.Min(panel1.HorizontalScroll.Value + scrollAmount, panel1.HorizontalScroll.Maximum);
+                panel1.HorizontalScroll.Value = Math.Min(panel1.HorizontalScroll.Value + scrollSpeed, panel1.HorizontalScroll.Maximum);
                 needScroll = true;
             }
 
             // 检查鼠标是否接近上边缘
             if (actualMouseY < scrollMargin)
             {
-                panel1.VerticalScroll.Value = Math.Max(panel1.VerticalScroll.Value - scrollAmount, panel1.VerticalScroll.Minimum);
+                panel1.VerticalScroll.Value = Math.Max(panel1.VerticalScroll.Value - scrollSpeed, panel1.VerticalScroll.Minimum);
                 needScroll = true;
             }
             // 检查鼠标是否接近下边缘
             else if (actualMouseY > panel1.ClientSize.Height - scrollMargin)
             {
-                panel1.VerticalScroll.Value = Math.Min(panel1.VerticalScroll.Value + scrollAmount, panel1.VerticalScroll.Maximum);
+                panel1.VerticalScroll.Value = Math.Min(panel1.VerticalScroll.Value + scrollSpeed, panel1.VerticalScroll.Maximum);
                 needScroll = true;
             }
 
